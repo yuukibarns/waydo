@@ -24,11 +24,11 @@ struct MenuItem {
 
 static APP_MENU: &[MenuItem] = &[
     MenuItem {
-        label: "Terminal",
-        kind: ItemKind::Action("spawn -- neovide", true),
+        label: "Neovide",
+        kind: ItemKind::Action("spawn -- fish -c ~/.local/bin/neovide-focus", true),
     },
     MenuItem {
-        label: "Browser",
+        label: "Zen Browser",
         kind: ItemKind::Action("spawn -- flatpak run app.zen_browser.zen", true),
     },
     MenuItem {
@@ -38,6 +38,10 @@ static APP_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Zotero",
         kind: ItemKind::Action("spawn -- flatpak run org.zotero.Zotero", true),
+    },
+    MenuItem {
+        label: "Btop",
+        kind: ItemKind::Action("spawn -- alacritty --title 'Btop' -e btop", true),
     },
 ];
 
@@ -62,6 +66,10 @@ static ACTION_MENU: &[MenuItem] = &[
         label: "Screenshot",
         kind: ItemKind::Action("screenshot -p false", true),
     },
+    MenuItem {
+        label: "Switch",
+        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
+    },
 ];
 
 static MOVEMENT_MENU: &[MenuItem] = &[
@@ -83,35 +91,49 @@ static MOVEMENT_MENU: &[MenuItem] = &[
     },
 ];
 
-// Root order: Up, RU, Right, RD, Down, LD, Left, LU
-static ROOT_MENU: &[MenuItem] = &[
+static FOCUS_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Up",
         kind: ItemKind::Action("focus-workspace-up", false),
-    },
-    MenuItem {
-        label: "Action >",
-        kind: ItemKind::Submenu(ACTION_MENU),
     },
     MenuItem {
         label: "Right",
         kind: ItemKind::Action("focus-column-right", false),
     },
     MenuItem {
-        label: "Movement >",
-        kind: ItemKind::Submenu(MOVEMENT_MENU),
-    },
-    MenuItem {
         label: "Down",
         kind: ItemKind::Action("focus-workspace-down", false),
     },
     MenuItem {
-        label: "Switch",
-        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
-    },
-    MenuItem {
         label: "Left",
         kind: ItemKind::Action("focus-column-left", false),
+    },
+];
+
+static ROOT_MENU: &[MenuItem] = &[
+    MenuItem {
+        label: "Action >",
+        kind: ItemKind::Submenu(ACTION_MENU),
+    },
+    MenuItem {
+        label: "Movement >",
+        kind: ItemKind::Submenu(MOVEMENT_MENU),
+    },
+    MenuItem {
+        label: "Focus >",
+        kind: ItemKind::Submenu(FOCUS_MENU),
+    },
+    MenuItem {
+        label: "Tools",
+        kind: ItemKind::Action("key-ctrl-6", true),
+    },
+    MenuItem {
+        label: "Selector",
+        kind: ItemKind::Action("key-ctrl-5", true),
+    },
+    MenuItem {
+        label: "Brush",
+        kind: ItemKind::Action("key-ctrl-1", true),
     },
     MenuItem {
         label: "App >",
@@ -186,7 +208,40 @@ fn dist2(ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
     dx * dx + dy * dy
 }
 
+fn num_to_evdev(n: u8) -> Option<u16> {
+    match n {
+        1 => Some(2),
+        2 => Some(3),
+        3 => Some(4),
+        4 => Some(5),
+        5 => Some(6),
+        6 => Some(7),
+        7 => Some(8),
+        8 => Some(9),
+        9 => Some(10),
+        0 => Some(11),
+        _ => None,
+    }
+}
+
+fn run_ydotool_ctrl_num(n: u8) {
+    if let Some(code) = num_to_evdev(n) {
+        let down = format!("{code}:1");
+        let up = format!("{code}:0");
+        let _ = Command::new("ydotool")
+            .args(["key", "29:1", &down, &up, "29:0"]) // 29 = LEFTCTRL
+            .status();
+    }
+}
+
 fn run_niri_action(action: &str) {
+    if let Some(rest) = action.strip_prefix("key-ctrl-") {
+        if let Ok(n) = rest.parse::<u8>() {
+            run_ydotool_ctrl_num(n);
+            return;
+        }
+    }
+
     let mut cmd = Command::new("niri");
     cmd.arg("msg").arg("action");
     for part in action.split_whitespace() {
