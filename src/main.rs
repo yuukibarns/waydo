@@ -66,10 +66,6 @@ static ACTION_MENU: &[MenuItem] = &[
         label: "Screenshot",
         kind: ItemKind::Action("screenshot -p false", true),
     },
-    MenuItem {
-        label: "Switch",
-        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
-    },
 ];
 
 static MOVEMENT_MENU: &[MenuItem] = &[
@@ -97,16 +93,32 @@ static FOCUS_MENU: &[MenuItem] = &[
         kind: ItemKind::Action("focus-workspace-up", false),
     },
     MenuItem {
+        label: "Switch",
+        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
+    },
+    MenuItem {
         label: "Right",
         kind: ItemKind::Action("focus-column-right", false),
+    },
+    MenuItem {
+        label: "Switch",
+        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
     },
     MenuItem {
         label: "Down",
         kind: ItemKind::Action("focus-workspace-down", false),
     },
     MenuItem {
+        label: "Switch",
+        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
+    },
+    MenuItem {
         label: "Left",
         kind: ItemKind::Action("focus-column-left", false),
+    },
+    MenuItem {
+        label: "Switch",
+        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
     },
 ];
 
