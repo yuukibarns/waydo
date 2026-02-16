@@ -10,7 +10,7 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 #[derive(Clone, Copy)]
 enum ItemKind {
-    Action(&'static str),
+    Action(&'static str, bool),
     Submenu(&'static [MenuItem]),
 }
 
@@ -25,38 +25,38 @@ struct MenuItem {
 static APP_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Terminal",
-        kind: ItemKind::Action("spawn -- neovide"),
+        kind: ItemKind::Action("spawn -- neovide", true),
     },
     MenuItem {
         label: "Browser",
-        kind: ItemKind::Action("spawn -- flatpak run app.zen_browser.zen"),
+        kind: ItemKind::Action("spawn -- flatpak run app.zen_browser.zen", true),
     },
     MenuItem {
         label: "Files",
-        kind: ItemKind::Action("spawn -- nautilus"),
+        kind: ItemKind::Action("spawn -- nautilus", true),
     },
     MenuItem {
         label: "Zotero",
-        kind: ItemKind::Action("spawn -- flatpak run org.zotero.Zotero"),
+        kind: ItemKind::Action("spawn -- flatpak run org.zotero.Zotero", true),
     },
 ];
 
 static ACTION_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Fullscreen",
-        kind: ItemKind::Action("fullscreen-window"),
+        kind: ItemKind::Action("fullscreen-window", false),
     },
     MenuItem {
         label: "Toggle Float",
-        kind: ItemKind::Action("toggle-window-floating"),
+        kind: ItemKind::Action("toggle-window-floating", false),
     },
     MenuItem {
         label: "Copy",
-        kind: ItemKind::Action("wtype -M ctrl c -m ctrl"),
+        kind: ItemKind::Action("wtype -M ctrl c -m ctrl", false),
     },
     MenuItem {
         label: "Screenshot",
-        kind: ItemKind::Action("screenshot -p false"),
+        kind: ItemKind::Action("screenshot -p false", true),
     },
 ];
 
@@ -64,7 +64,7 @@ static ACTION_MENU: &[MenuItem] = &[
 static ROOT_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Up",
-        kind: ItemKind::Action("focus-workspace-up"),
+        kind: ItemKind::Action("focus-workspace-up", false),
     },
     MenuItem {
         label: "Action >",
@@ -72,23 +72,23 @@ static ROOT_MENU: &[MenuItem] = &[
     },
     MenuItem {
         label: "Right",
-        kind: ItemKind::Action("focus-column-right"),
+        kind: ItemKind::Action("focus-column-right", false),
     },
     MenuItem {
         label: "Close",
-        kind: ItemKind::Action("close-window"),
+        kind: ItemKind::Action("close-window", false),
     },
     MenuItem {
         label: "Down",
-        kind: ItemKind::Action("focus-workspace-down"),
+        kind: ItemKind::Action("focus-workspace-down", false),
     },
     MenuItem {
         label: "Switch",
-        kind: ItemKind::Action("switch-focus-between-floating-and-tiling"),
+        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
     },
     MenuItem {
         label: "Left",
-        kind: ItemKind::Action("focus-column-left"),
+        kind: ItemKind::Action("focus-column-left", false),
     },
     MenuItem {
         label: "App >",
@@ -129,7 +129,7 @@ fn current_items(path: &[usize]) -> &'static [MenuItem] {
         }
         match items[idx].kind {
             ItemKind::Submenu(sub) => items = sub,
-            ItemKind::Action(_) => break,
+            ItemKind::Action(_, _) => break,
         }
     }
     items
@@ -150,7 +150,7 @@ fn breadcrumb(path: &[usize]) -> String {
         out.push(items[idx].label.trim_end_matches(" >").to_string());
         match items[idx].kind {
             ItemKind::Submenu(sub) => items = sub,
-            ItemKind::Action(_) => break,
+            ItemKind::Action(_, _) => break,
         }
     }
 
@@ -480,7 +480,10 @@ fn main() {
                 };
 
                 match items[idx].kind {
-                    ItemKind::Action(action) => {
+                    ItemKind::Action(action, close_on_click) => {
+                        if close_on_click {
+                            win2.close();
+                        }
                         run_niri_action(action);
                     }
                     ItemKind::Submenu(_) => {
