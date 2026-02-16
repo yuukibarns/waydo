@@ -162,8 +162,6 @@ struct State {
 
     // Stack of centers for back navigation (same depth as path)
     center_stack: Vec<(f64, f64)>,
-
-    hovered: Option<usize>,
 }
 
 fn current_items(path: &[usize]) -> &'static [MenuItem] {
@@ -274,21 +272,28 @@ fn ring_layout(n: usize, cx: f64, cy: f64, dist: f64) -> Vec<(f64, f64)> {
     let step = std::f64::consts::TAU / n as f64;
     (0..n)
         .map(|i| {
-            let a = -std::f64::consts::FRAC_PI_2 + i as f64 * step; // 0 = Up
+            let a = -std::f64::consts::FRAC_PI_2 + i as f64 * step;
             (cx + dist * a.cos(), cy + dist * a.sin())
         })
         .collect()
 }
 
-fn closest_index_to_pointer(st: &State, points: &[(f64, f64)], deadzone: f64) -> Option<usize> {
-    let pointer_r2 = dist2(st.px, st.py, st.cx, st.cy);
+fn closest_index_for_pointer(
+    px: f64,
+    py: f64,
+    cx: f64,
+    cy: f64,
+    points: &[(f64, f64)],
+    deadzone: f64,
+) -> Option<usize> {
+    let pointer_r2 = dist2(px, py, cx, cy);
     if pointer_r2 < deadzone * deadzone {
         return None;
     }
 
     let mut best: Option<(usize, f64)> = None;
     for (i, (x, y)) in points.iter().enumerate() {
-        let d = dist2(st.px, st.py, *x, *y);
+        let d = dist2(px, py, *x, *y);
         match best {
             None => best = Some((i, d)),
             Some((_, bd)) if d < bd => best = Some((i, d)),
@@ -298,24 +303,7 @@ fn closest_index_to_pointer(st: &State, points: &[(f64, f64)], deadzone: f64) ->
     best.map(|(i, _)| i)
 }
 
-fn update_hover(st: &mut State) {
-    if !st.anchored {
-        st.hovered = None;
-        return;
-    }
-
-    let items = current_items(&st.path);
-    let dist = if st.path.is_empty() { 120.0 } else { 108.0 };
-    let deadzone = if st.path.is_empty() { 25.0 } else { 30.0 };
-
-    let points = ring_layout(items.len(), st.cx, st.cy, dist);
-    st.hovered = closest_index_to_pointer(st, &points, deadzone);
-}
-
-fn draw_ui(cr: &gtk::cairo::Context, w: i32, h: i32, st: &State) {
-    let w = w as f64;
-    let h = h as f64;
-
+fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
     if !st.anchored {
         return;
     }
@@ -328,14 +316,12 @@ fn draw_ui(cr: &gtk::cairo::Context, w: i32, h: i32, st: &State) {
     let cx = st.cx;
     let cy = st.cy;
 
-    // Optional root marker for orientation once inside submenu
     if !st.path.is_empty() {
         cr.set_source_rgba(1.0, 1.0, 1.0, 0.18);
         cr.arc(st.root_cx, st.root_cy, 6.0, 0.0, std::f64::consts::TAU);
         let _ = cr.fill();
     }
 
-    // center node: close at root, back in submenu
     let center_r = 24.0;
     if st.path.is_empty() {
         cr.set_source_rgba(0.75, 0.2, 0.2, 0.88);
@@ -353,20 +339,17 @@ fn draw_ui(cr: &gtk::cairo::Context, w: i32, h: i32, st: &State) {
     cr.set_line_width(2.5);
     cr.set_source_rgba(1.0, 1.0, 1.0, 0.95);
     if st.path.is_empty() {
-        // X
         cr.move_to(cx - 7.0, cy - 7.0);
         cr.line_to(cx + 7.0, cy + 7.0);
         cr.move_to(cx + 7.0, cy - 7.0);
         cr.line_to(cx - 7.0, cy + 7.0);
     } else {
-        // <
         cr.move_to(cx + 5.0, cy - 8.0);
         cr.line_to(cx - 5.0, cy);
         cr.line_to(cx + 5.0, cy + 8.0);
     }
     let _ = cr.stroke();
 
-    // breadcrumb above center
     let bc = breadcrumb(&st.path);
     cr.set_source_rgba(1.0, 1.0, 1.0, 0.90);
     cr.select_font_face(
@@ -392,13 +375,8 @@ fn draw_ui(cr: &gtk::cairo::Context, w: i32, h: i32, st: &State) {
 
     for i in 0..n {
         let (bx, by) = points[i];
-        let selected = st.hovered == Some(i);
 
-        if selected {
-            cr.set_source_rgba(0.2, 0.6, 1.0, 0.93);
-        } else {
-            cr.set_source_rgba(0.15, 0.15, 0.15, 0.80);
-        }
+        cr.set_source_rgba(0.15, 0.15, 0.15, 0.80);
         cr.arc(bx, by, radius, 0.0, std::f64::consts::TAU);
         let _ = cr.fill();
 
@@ -424,13 +402,6 @@ fn draw_ui(cr: &gtk::cairo::Context, w: i32, h: i32, st: &State) {
             let _ = cr.show_text(text);
         }
     }
-
-    // pointer line from current menu center
-    cr.set_line_width(2.0);
-    cr.set_source_rgba(1.0, 1.0, 1.0, 0.45);
-    cr.move_to(cx, cy);
-    cr.line_to(st.px, st.py);
-    let _ = cr.stroke();
 }
 
 fn main() {
@@ -471,21 +442,8 @@ fn main() {
 
         win.set_child(Some(&da));
 
+        // Motion is used only to initialize anchor center once; no redraw on movement.
         let motion = gtk::EventControllerMotion::new();
-
-        {
-            let state = state.clone();
-            let da2 = da.clone();
-            motion.connect_enter(move |_, x, y| {
-                let mut st = state.borrow_mut();
-                st.px = x;
-                st.py = y;
-
-                update_hover(&mut st);
-                da2.queue_draw();
-            });
-        }
-
         {
             let state = state.clone();
             let da2 = da.clone();
@@ -500,13 +458,10 @@ fn main() {
                     st.cy = y;
                     st.root_cx = x;
                     st.root_cy = y;
+                    da2.queue_draw();
                 }
-
-                update_hover(&mut st);
-                da2.queue_draw();
             });
         }
-
         da.add_controller(motion);
 
         let click = gtk::GestureClick::new();
@@ -520,13 +475,19 @@ fn main() {
             click.connect_released(move |_, _n_press, x, y| {
                 let mut st = state.borrow_mut();
 
+                // If no motion happened yet, anchor on first click.
                 if !st.anchored {
+                    st.anchored = true;
+                    st.cx = x;
+                    st.cy = y;
+                    st.root_cx = x;
+                    st.root_cy = y;
+                    da2.queue_draw();
                     return;
                 }
 
                 let center_r = 24.0;
                 if dist2(x, y, st.cx, st.cy) <= center_r * center_r {
-                    // center = close at root, back in submenu
                     if st.path.is_empty() {
                         win2.close();
                     } else {
@@ -538,7 +499,6 @@ fn main() {
                             st.cx = st.root_cx;
                             st.cy = st.root_cy;
                         }
-                        update_hover(&mut st);
                         da2.queue_draw();
                     }
                     return;
@@ -553,7 +513,7 @@ fn main() {
                 let dist = if st.path.is_empty() { 120.0 } else { 108.0 };
                 let deadzone = if st.path.is_empty() { 25.0 } else { 30.0 };
                 let points = ring_layout(n, st.cx, st.cy, dist);
-                let idx = match closest_index_to_pointer(&st, &points, deadzone) {
+                let idx = match closest_index_for_pointer(x, y, st.cx, st.cy, &points, deadzone) {
                     Some(i) if i < n => i,
                     _ => return,
                 };
@@ -566,20 +526,16 @@ fn main() {
                         run_niri_action(action);
                     }
                     ItemKind::Submenu(_) => {
-                        // Kando-like: submenu center moves to clicked node
                         let (next_cx, next_cy) = points[idx];
                         let prev_cx = st.cx;
                         let prev_cy = st.cy;
                         st.center_stack.push((prev_cx, prev_cy));
-
                         st.path.push(idx);
                         st.cx = next_cx;
                         st.cy = next_cy;
-                        update_hover(&mut st);
+                        da2.queue_draw();
                     }
                 }
-
-                da2.queue_draw();
             });
         }
 
