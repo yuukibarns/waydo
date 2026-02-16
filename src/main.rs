@@ -47,16 +47,39 @@ static ACTION_MENU: &[MenuItem] = &[
         kind: ItemKind::Action("fullscreen-window", false),
     },
     MenuItem {
+        label: "Maximize",
+        kind: ItemKind::Action("maximize-window-to-edges", false),
+    },
+    MenuItem {
         label: "Toggle Float",
         kind: ItemKind::Action("toggle-window-floating", false),
     },
     MenuItem {
-        label: "Copy",
-        kind: ItemKind::Action("wtype -M ctrl c -m ctrl", false),
+        label: "Close",
+        kind: ItemKind::Action("close-window", false),
     },
     MenuItem {
         label: "Screenshot",
         kind: ItemKind::Action("screenshot -p false", true),
+    },
+];
+
+static MOVEMENT_MENU: &[MenuItem] = &[
+    MenuItem {
+        label: "Up",
+        kind: ItemKind::Action("move-window-to-workspace-up", false),
+    },
+    MenuItem {
+        label: "Right",
+        kind: ItemKind::Action("swap-window-right", false),
+    },
+    MenuItem {
+        label: "Down",
+        kind: ItemKind::Action("move-window-to-workspace-down", false),
+    },
+    MenuItem {
+        label: "Left",
+        kind: ItemKind::Action("swap-window-left", false),
     },
 ];
 
@@ -75,8 +98,8 @@ static ROOT_MENU: &[MenuItem] = &[
         kind: ItemKind::Action("focus-column-right", false),
     },
     MenuItem {
-        label: "Close",
-        kind: ItemKind::Action("close-window", false),
+        label: "Movement >",
+        kind: ItemKind::Submenu(MOVEMENT_MENU),
     },
     MenuItem {
         label: "Down",
@@ -403,14 +426,6 @@ fn main() {
                 st.px = x;
                 st.py = y;
 
-                if !st.anchored {
-                    st.anchored = true;
-                    st.cx = x;
-                    st.cy = y;
-                    st.root_cx = x;
-                    st.root_cy = y;
-                }
-
                 update_hover(&mut st);
                 da2.queue_draw();
             });
@@ -423,6 +438,15 @@ fn main() {
                 let mut st = state.borrow_mut();
                 st.px = x;
                 st.py = y;
+
+                if !st.anchored {
+                    st.anchored = true;
+                    st.cx = x;
+                    st.cy = y;
+                    st.root_cx = x;
+                    st.root_cy = y;
+                }
+
                 update_hover(&mut st);
                 da2.queue_draw();
             });
