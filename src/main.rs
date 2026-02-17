@@ -1,10 +1,16 @@
 use gtk::gdk;
+use gtk::glib;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, DrawingArea};
 
 use std::cell::RefCell;
+use std::env;
+use std::io::{BufRead, BufReader, Write};
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::path::Path;
 use std::process::Command;
 use std::rc::Rc;
+use std::thread;
 
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
@@ -156,6 +162,7 @@ static ROOT_MENU: &[MenuItem] = &[
 #[derive(Debug, Default)]
 struct State {
     anchored: bool,
+    visible: bool,
 
     // Pointer position
     px: f64,
@@ -239,7 +246,7 @@ fn run_ydotool_ctrl_num(n: u8) {
         let down = format!("{code}:1");
         let up = format!("{code}:0");
         let _ = Command::new("ydotool")
-            .args(["key", "29:1", &down, &up, "29:0"]) // 29 = LEFTCTRL
+            .args(["key", "29:1", &down, &up, "29:0"])
             .status();
     }
 }
@@ -316,7 +323,7 @@ fn closest_index_for_pointer(
 }
 
 fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
-    if !st.anchored {
+    if !st.anchored || !st.visible {
         return;
     }
 
@@ -416,8 +423,34 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
     }
 }
 
-fn main() {
-    let app = Application::builder().application_id("waydo").build();
+fn hide_menu(st: &mut State, win: &ApplicationWindow, da: &DrawingArea) {
+    st.visible = false;
+    st.anchored = false;
+    st.path.clear();
+    st.center_stack.clear();
+    da.queue_draw();
+    win.hide();
+}
+
+fn show_menu(st: &mut State, win: &ApplicationWindow, da: &DrawingArea) {
+    st.visible = true;
+    st.anchored = false;
+    st.path.clear();
+    st.center_stack.clear();
+    win.present();
+    da.queue_draw();
+}
+
+fn send_toggle() -> std::io::Result<()> {
+    let mut stream = UnixStream::connect("/tmp/waydo.sock")?;
+    stream.write_all(b"TOGGLE\n")?;
+    Ok(())
+}
+
+fn run_daemon() {
+    let app = Application::builder()
+        .application_id("io.github.waydo")
+        .build();
 
     app.connect_activate(|app| {
         install_transparent_css();
@@ -453,19 +486,19 @@ fn main() {
         }
 
         win.set_child(Some(&da));
+        win.hide();
 
-        // Motion is used only to initialize anchor center once; no redraw on movement.
         let motion = gtk::EventControllerMotion::new();
         {
             let state = state.clone();
             let da2 = da.clone();
             motion.connect_motion(move |_, x, y| {
                 let mut st = state.borrow_mut();
-                st.px = x;
-                st.py = y;
 
-                if !st.anchored {
+                if st.visible && !st.anchored {
                     st.anchored = true;
+                    st.px = x;
+                    st.py = y;
                     st.cx = x;
                     st.cy = y;
                     st.root_cx = x;
@@ -486,8 +519,10 @@ fn main() {
 
             click.connect_released(move |_, _n_press, x, y| {
                 let mut st = state.borrow_mut();
+                if !st.visible {
+                    return;
+                }
 
-                // If no motion happened yet, anchor on first click.
                 if !st.anchored {
                     st.anchored = true;
                     st.cx = x;
@@ -501,7 +536,7 @@ fn main() {
                 let center_r = 24.0;
                 if dist2(x, y, st.cx, st.cy) <= center_r * center_r {
                     if st.path.is_empty() {
-                        win2.close();
+                        hide_menu(&mut st, &win2, &da2);
                     } else {
                         st.path.pop();
                         if let Some((pcx, pcy)) = st.center_stack.pop() {
@@ -533,7 +568,7 @@ fn main() {
                 match items[idx].kind {
                     ItemKind::Action(action, close_on_click) => {
                         if close_on_click {
-                            win2.close();
+                            hide_menu(&mut st, &win2, &da2);
                         }
                         run_niri_action(action);
                     }
@@ -553,9 +588,72 @@ fn main() {
 
         da.add_controller(click);
 
-        win.present();
-        win.grab_focus();
+        let (tx, rx) = std::sync::mpsc::channel::<String>();
+
+        {
+            let state = state.clone();
+            let win2 = win.clone();
+            let da2 = da.clone();
+            glib::timeout_add_local(std::time::Duration::from_millis(16), move || {
+                while let Ok(msg) = rx.try_recv() {
+                    if msg == "TOGGLE" {
+                        let mut st = state.borrow_mut();
+                        if st.visible {
+                            hide_menu(&mut st, &win2, &da2);
+                        } else {
+                            show_menu(&mut st, &win2, &da2);
+                        }
+                    }
+                }
+                glib::ControlFlow::Continue
+            });
+        }
+
+        thread::spawn(move || {
+            let socket_path = "/tmp/waydo.sock";
+            if Path::new(socket_path).exists() {
+                let _ = std::fs::remove_file(socket_path);
+            }
+
+            let listener = match UnixListener::bind(socket_path) {
+                Ok(l) => l,
+                Err(e) => {
+                    eprintln!("waydo: failed to bind {}: {}", socket_path, e);
+                    return;
+                }
+            };
+
+            for stream in listener.incoming() {
+                if let Ok(stream) = stream {
+                    let mut reader = BufReader::new(stream);
+                    let mut line = String::new();
+                    if reader.read_line(&mut line).is_ok() {
+                        if line.trim() == "TOGGLE" {
+                            let _ = tx.send("TOGGLE".to_string());
+                        }
+                    }
+                }
+            }
+        });
     });
 
-    app.run();
+    app.run_with_args(&["waydo"]);
+}
+
+fn main() {
+    let arg = env::args().nth(1).unwrap_or_else(|| "toggle".to_string());
+
+    match arg.as_str() {
+        "daemon" => run_daemon(),
+        "toggle" => {
+            if let Err(e) = send_toggle() {
+                eprintln!("waydo: toggle failed: {}", e);
+                std::process::exit(1);
+            }
+        }
+        _ => {
+            eprintln!("usage: waydo [daemon|toggle]");
+            std::process::exit(2);
+        }
+    }
 }
