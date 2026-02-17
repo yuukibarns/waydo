@@ -184,7 +184,6 @@ static DUPLICATE_MENU: &[MenuItem] = &[
     },
 ];
 
-
 static ROOT_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Action >",
@@ -235,9 +234,6 @@ struct State {
 
     // Path root -> submenu
     path: Vec<usize>,
-
-    // Stack of centers for back navigation (same depth as path)
-    center_stack: Vec<(f64, f64)>,
 }
 
 fn current_items(path: &[usize]) -> &'static [MenuItem] {
@@ -555,7 +551,6 @@ fn hide_menu(st: &mut State, win: &ApplicationWindow, da: &DrawingArea) {
     st.visible = false;
     st.anchored = false;
     st.path.clear();
-    st.center_stack.clear();
     win.hide();
 }
 
@@ -563,7 +558,6 @@ fn show_menu(st: &mut State, win: &ApplicationWindow, da: &DrawingArea) {
     st.visible = true;
     st.anchored = false;
     st.path.clear();
-    st.center_stack.clear();
     win.present();
     da.queue_draw();
 }
@@ -660,20 +654,14 @@ fn run_daemon() {
                     return;
                 }
 
-                let center_r = 24.0;
                 let center_r = 24.0 * UI_SCALE;
                 if dist2(x, y, st.cx, st.cy) <= center_r * center_r {
                     if st.path.is_empty() {
                         hide_menu(&mut st, &win2, &da2);
                     } else {
                         st.path.pop();
-                        if let Some((pcx, pcy)) = st.center_stack.pop() {
-                            st.cx = pcx;
-                            st.cy = pcy;
-                        } else {
-                            st.cx = st.root_cx;
-                            st.cy = st.root_cy;
-                        }
+                        st.cx = x;
+                        st.cy = y;
                         da2.queue_draw();
                     }
                     return;
@@ -713,13 +701,9 @@ fn run_daemon() {
                         }
                     }
                     ItemKind::Submenu(_) => {
-                        let (next_cx, next_cy) = points[idx];
-                        let prev_cx = st.cx;
-                        let prev_cy = st.cy;
-                        st.center_stack.push((prev_cx, prev_cy));
                         st.path.push(idx);
-                        st.cx = next_cx;
-                        st.cy = next_cy;
+                        st.cx = x;
+                        st.cy = y;
                         da2.queue_draw();
                     }
                 }
