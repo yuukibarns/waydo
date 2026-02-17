@@ -128,6 +128,41 @@ static FOCUS_MENU: &[MenuItem] = &[
     },
 ];
 
+static MISC_MENU: &[MenuItem] = &[
+    MenuItem {
+        label: "Page Up",
+        kind: ItemKind::Action("key-pageup", false),
+    },
+    MenuItem {
+        label: "Undo",
+        kind: ItemKind::Action("key-ctrl-z", false),
+    },
+    MenuItem {
+        label: "Redo",
+        kind: ItemKind::Action("key-ctrl-shift-z", false),
+    },
+    MenuItem {
+        label: "Zoom Out",
+        kind: ItemKind::Action("key-ctrl-minus", false),
+    },
+    MenuItem {
+        label: "Page Down",
+        kind: ItemKind::Action("key-pagedown", false),
+    },
+    MenuItem {
+        label: "Zoom In",
+        kind: ItemKind::Action("key-ctrl-plus", false),
+    },
+    MenuItem {
+        label: "Delete",
+        kind: ItemKind::Action("key-delete", false),
+    },
+    MenuItem {
+        label: "Duplicate",
+        kind: ItemKind::Action("key-ctrl-d", false),
+    },
+];
+
 static ROOT_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Action >",
@@ -136,6 +171,10 @@ static ROOT_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Workspace >",
         kind: ItemKind::Submenu(FOCUS_MENU),
+    },
+    MenuItem {
+        label: "Misc >",
+        kind: ItemKind::Submenu(MISC_MENU),
     },
     MenuItem {
         label: "Tools",
@@ -221,38 +260,104 @@ fn dist2(ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
     dx * dx + dy * dy
 }
 
-fn num_to_evdev(n: u8) -> Option<u16> {
-    match n {
-        1 => Some(2),
-        2 => Some(3),
-        3 => Some(4),
-        4 => Some(5),
-        5 => Some(6),
-        6 => Some(7),
-        7 => Some(8),
-        8 => Some(9),
-        9 => Some(10),
-        0 => Some(11),
+fn key_token_to_evdev(tok: &str) -> Option<u16> {
+    match tok {
+        // Modifiers
+        "ctrl" => Some(29),            // KEY_LEFTCTRL
+        "shift" => Some(42),           // KEY_LEFTSHIFT
+        "alt" => Some(56),             // KEY_LEFTALT
+        "meta" | "super" => Some(125), // KEY_LEFTMETA
+
+        // Digits
+        "1" => Some(2),
+        "2" => Some(3),
+        "3" => Some(4),
+        "4" => Some(5),
+        "5" => Some(6),
+        "6" => Some(7),
+        "7" => Some(8),
+        "8" => Some(9),
+        "9" => Some(10),
+        "0" => Some(11),
+
+        // Letters
+        "a" => Some(30),
+        "b" => Some(48),
+        "c" => Some(46),
+        "d" => Some(32),
+        "e" => Some(18),
+        "f" => Some(33),
+        "g" => Some(34),
+        "h" => Some(35),
+        "i" => Some(23),
+        "j" => Some(36),
+        "k" => Some(37),
+        "l" => Some(38),
+        "m" => Some(50),
+        "n" => Some(49),
+        "o" => Some(24),
+        "p" => Some(25),
+        "q" => Some(16),
+        "r" => Some(19),
+        "s" => Some(31),
+        "t" => Some(20),
+        "u" => Some(22),
+        "v" => Some(47),
+        "w" => Some(17),
+        "x" => Some(45),
+        "y" => Some(21),
+        "z" => Some(44),
+
+        // Special keys
+        "minus" => Some(12),
+        "equal" | "plus" => Some(13),
+        "delete" | "backspace" => Some(14),
+        "pageup" => Some(104),
+        "pagedown" => Some(109),
+
         _ => None,
     }
 }
 
-fn run_ydotool_ctrl_num(n: u8) {
-    if let Some(code) = num_to_evdev(n) {
-        let down = format!("{code}:1");
-        let up = format!("{code}:0");
-        let _ = Command::new("ydotool")
-            .args(["key", "29:1", &down, &up, "29:0"])
-            .status();
+fn run_ydotool_combo(spec: &str) {
+    // Supports both "delete" and combos like "ctrl-shift-z".
+    let parts: Vec<&str> = spec.split('-').collect();
+    if parts.is_empty() {
+        return;
     }
+
+    let (mods, main) = parts.split_at(parts.len() - 1);
+    let main_code = match key_token_to_evdev(main[0]) {
+        Some(c) => c,
+        None => return,
+    };
+
+    let mut args: Vec<String> = vec!["key".to_string()];
+    let mut mod_codes: Vec<u16> = Vec::new();
+
+    for m in mods {
+        let code = match key_token_to_evdev(m) {
+            Some(c) => c,
+            None => return,
+        };
+        mod_codes.push(code);
+        args.push(format!("{code}:1"));
+    }
+
+    args.push(format!("{main_code}:1"));
+    args.push(format!("{main_code}:0"));
+
+    for code in mod_codes.iter().rev() {
+        args.push(format!("{code}:0"));
+    }
+
+    let _ = Command::new("ydotool").args(&args).status();
 }
 
 fn run_niri_action(action: &str) {
-    if let Some(rest) = action.strip_prefix("key-ctrl-") {
-        if let Ok(n) = rest.parse::<u8>() {
-            run_ydotool_ctrl_num(n);
-            return;
-        }
+    if let Some(spec) = action.strip_prefix("key-") {
+        run_ydotool_combo(spec);
+        return;
     }
 
     let mut cmd = Command::new("niri");
@@ -424,7 +529,6 @@ fn hide_menu(st: &mut State, win: &ApplicationWindow, da: &DrawingArea) {
     st.anchored = false;
     st.path.clear();
     st.center_stack.clear();
-    da.queue_draw();
     win.hide();
 }
 
@@ -566,7 +670,19 @@ fn run_daemon() {
                         if close_on_click {
                             hide_menu(&mut st, &win2, &da2);
                         }
-                        run_niri_action(action);
+
+                        // HACK
+                        if action.starts_with("screenshot") {
+                            let action_owned = action.to_string();
+                            glib::timeout_add_local_once(
+                                std::time::Duration::from_millis(80),
+                                move || {
+                                    run_niri_action(&action_owned);
+                                },
+                            );
+                        } else {
+                            run_niri_action(action);
+                        }
                     }
                     ItemKind::Submenu(_) => {
                         let (next_cx, next_cy) = points[idx];
