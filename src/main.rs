@@ -107,16 +107,16 @@ static FOCUS_MENU: &[MenuItem] = &[
         kind: ItemKind::Action("focus-column-right", false),
     },
     MenuItem {
-        label: "Switch",
-        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
+        label: "Move >",
+        kind: ItemKind::Submenu(MOVEMENT_MENU),
     },
     MenuItem {
         label: "Down",
         kind: ItemKind::Action("focus-workspace-down", false),
     },
     MenuItem {
-        label: "Switch",
-        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
+        label: "Move >",
+        kind: ItemKind::Submenu(MOVEMENT_MENU),
     },
     MenuItem {
         label: "Left",
@@ -134,11 +134,7 @@ static ROOT_MENU: &[MenuItem] = &[
         kind: ItemKind::Submenu(ACTION_MENU),
     },
     MenuItem {
-        label: "Movement >",
-        kind: ItemKind::Submenu(MOVEMENT_MENU),
-    },
-    MenuItem {
-        label: "Focus >",
+        label: "Workspace >",
         kind: ItemKind::Submenu(FOCUS_MENU),
     },
     MenuItem {
