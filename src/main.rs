@@ -14,6 +14,8 @@ use std::thread;
 
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
+const UI_SCALE: f64 = 0.9;
+
 #[derive(Clone, Copy)]
 enum ItemKind {
     Action(&'static str, bool),
@@ -48,6 +50,10 @@ static APP_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Btop",
         kind: ItemKind::Action("spawn -- alacritty --title 'Btop' -e btop", true),
+    },
+    MenuItem {
+        label: "Close",
+        kind: ItemKind::Action("close-window", false),
     },
 ];
 
@@ -155,13 +161,29 @@ static MISC_MENU: &[MenuItem] = &[
     },
     MenuItem {
         label: "Delete",
-        kind: ItemKind::Action("key-delete", false),
+        kind: ItemKind::Action("key-delete", true),
+    },
+    MenuItem {
+        label: "Duplicate >",
+        kind: ItemKind::Submenu(DUPLICATE_MENU),
+    },
+];
+
+static DUPLICATE_MENU: &[MenuItem] = &[
+    MenuItem {
+        label: "Copy",
+        kind: ItemKind::Action("key-ctrl-c", true),
+    },
+    MenuItem {
+        label: "Paste",
+        kind: ItemKind::Action("key-ctrl-v", true),
     },
     MenuItem {
         label: "Duplicate",
-        kind: ItemKind::Action("key-ctrl-d", false),
+        kind: ItemKind::Action("key-ctrl-d", true),
     },
 ];
+
 
 static ROOT_MENU: &[MenuItem] = &[
     MenuItem {
@@ -442,7 +464,7 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
         let _ = cr.fill();
     }
 
-    let center_r = 24.0;
+    let center_r = 24.0 * UI_SCALE;
     if st.path.is_empty() {
         cr.set_source_rgba(0.75, 0.2, 0.2, 0.88);
     } else {
@@ -477,7 +499,7 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
         gtk::cairo::FontSlant::Normal,
         gtk::cairo::FontWeight::Normal,
     );
-    cr.set_font_size(13.0);
+    cr.set_font_size(13.0 * UI_SCALE);
     if let Ok(ext) = cr.text_extents(&bc) {
         cr.move_to(cx - ext.width() / 2.0 - ext.x_bearing(), cy - 42.0);
         let _ = cr.show_text(&bc);
@@ -490,7 +512,11 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
     }
 
     let dist = if st.path.is_empty() { 120.0 } else { 108.0 };
+    let dist = dist * UI_SCALE;
+
     let radius = if st.path.is_empty() { 43.0 } else { 44.0 };
+    let radius = radius * UI_SCALE;
+
     let points = ring_layout(n, cx, cy, dist);
 
     for i in 0..n {
@@ -512,6 +538,7 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
             gtk::cairo::FontWeight::Normal,
         );
         cr.set_font_size(12.5);
+        cr.set_font_size(12.5 * UI_SCALE);
 
         let text = items[i].label;
         if let Ok(ext) = cr.text_extents(text) {
@@ -634,6 +661,7 @@ fn run_daemon() {
                 }
 
                 let center_r = 24.0;
+                let center_r = 24.0 * UI_SCALE;
                 if dist2(x, y, st.cx, st.cy) <= center_r * center_r {
                     if st.path.is_empty() {
                         hide_menu(&mut st, &win2, &da2);
@@ -657,8 +685,8 @@ fn run_daemon() {
                     return;
                 }
 
-                let dist = if st.path.is_empty() { 120.0 } else { 108.0 };
-                let deadzone = if st.path.is_empty() { 25.0 } else { 30.0 };
+                let dist = if st.path.is_empty() { 120.0 } else { 108.0 } * UI_SCALE;
+                let deadzone = if st.path.is_empty() { 25.0 } else { 30.0 } * UI_SCALE;
                 let points = ring_layout(n, st.cx, st.cy, dist);
                 let idx = match closest_index_for_pointer(x, y, st.cx, st.cy, &points, deadzone) {
                     Some(i) if i < n => i,
