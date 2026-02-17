@@ -14,7 +14,7 @@ use std::thread;
 
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
-const UI_SCALE: f64 = 0.9;
+const UI_SCALE: f64 = 1.0;
 
 #[derive(Clone, Copy)]
 enum ItemKind {
