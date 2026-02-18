@@ -14,8 +14,6 @@ use std::thread;
 
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
-const UI_SCALE: f64 = 0.9;
-
 #[derive(Clone, Copy)]
 struct Action {
     cmd: &'static str,
@@ -37,7 +35,10 @@ struct MenuItem {
     kind: ItemKind,
 }
 
-// ---------- Submenus ----------
+const CENTER_RADIUS: f64 = 18.0;
+const ITEM_RING_DISTANCE: f64 = 86.0;
+const ITEM_RADIUS: f64 = 35.0;
+const FONT_SIZE: f64 = 13.0;
 
 static APP_MENU: &[MenuItem] = &[
     MenuItem {
@@ -235,10 +236,10 @@ static MISC_MENU: &[MenuItem] = &[
         }),
     },
     MenuItem {
-        label: "Zoom Out",
+        label: "Delete",
         kind: ItemKind::Action(Action {
-            cmd: "key-ctrl-minus",
-            close_on_click: false,
+            cmd: "key-delete",
+            close_on_click: true,
         }),
     },
     MenuItem {
@@ -248,30 +249,6 @@ static MISC_MENU: &[MenuItem] = &[
             close_on_click: false,
         }),
     },
-    MenuItem {
-        label: "Zoom In",
-        kind: ItemKind::Action(Action {
-            cmd: "key-ctrl-plus",
-            close_on_click: false,
-        }),
-    },
-    MenuItem {
-        label: "Delete",
-        kind: ItemKind::Action(Action {
-            cmd: "key-delete",
-            close_on_click: true,
-        }),
-    },
-    MenuItem {
-        label: "Duplicate >",
-        kind: ItemKind::Submenu {
-            items: DUPLICATE_MENU,
-            on_click: None,
-        },
-    },
-];
-
-static DUPLICATE_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Copy",
         kind: ItemKind::Action(Action {
@@ -684,7 +661,7 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
         let _ = cr.fill();
     }
 
-    let center_r = 24.0 * UI_SCALE;
+    let center_r = CENTER_RADIUS;
     if st.path.is_empty() {
         cr.set_source_rgba(0.75, 0.2, 0.2, 0.88);
     } else {
@@ -718,8 +695,8 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
         return;
     }
 
-    let dist = 120.0 * UI_SCALE;
-    let radius = 43.0 * UI_SCALE;
+    let dist = ITEM_RING_DISTANCE;
+    let radius = ITEM_RADIUS;
 
     let points = ring_layout(n, cx, cy, dist);
 
@@ -741,7 +718,7 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
             gtk::cairo::FontSlant::Normal,
             gtk::cairo::FontWeight::Normal,
         );
-        cr.set_font_size(12.5 * UI_SCALE);
+        cr.set_font_size(FONT_SIZE);
 
         let text = items[i].label;
         if let Ok(ext) = cr.text_extents(text) {
@@ -861,7 +838,7 @@ fn run_daemon() {
                     return;
                 }
 
-                let center_r = 24.0 * UI_SCALE;
+                let center_r = CENTER_RADIUS;
                 if dist2(x, y, st.cx, st.cy) <= center_r * center_r {
                     if st.path.is_empty() {
                         hide_menu(&mut st, &win2, &da2);
@@ -880,16 +857,15 @@ fn run_daemon() {
                     return;
                 }
 
-                let dist = 120.0 * UI_SCALE;
-                let deadzone = 25.0 * UI_SCALE;
+                let dist = ITEM_RING_DISTANCE;
+                let deadzone = CENTER_RADIUS;
                 let points = ring_layout(n, st.cx, st.cy, dist);
                 let idx = match closest_index_for_pointer(x, y, st.cx, st.cy, &points, deadzone) {
                     Some(i) if i < n => i,
                     _ => return,
                 };
 
-                // "Quick click" = inside ring inner boundary (dist - button radius).
-                let radius = 43.0 * UI_SCALE;
+                let radius = ITEM_RADIUS;
                 let inner_ring = dist - radius;
                 let quick_click = dist2(x, y, st.cx, st.cy) <= inner_ring * inner_ring;
 
