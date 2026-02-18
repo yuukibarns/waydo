@@ -14,12 +14,21 @@ use std::thread;
 
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
-const UI_SCALE: f64 = 1.0;
+const UI_SCALE: f64 = 0.9;
+
+#[derive(Clone, Copy)]
+struct Action {
+    cmd: &'static str,
+    close_on_click: bool,
+}
 
 #[derive(Clone, Copy)]
 enum ItemKind {
-    Action(&'static str, bool),
-    Submenu(&'static [MenuItem]),
+    Action(Action),
+    Submenu {
+        items: &'static [MenuItem],
+        on_click: Option<Action>,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -33,185 +42,396 @@ struct MenuItem {
 static APP_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Neovide",
-        kind: ItemKind::Action("spawn -- fish -c ~/.local/bin/neovide-focus", true),
+        kind: ItemKind::Action(Action {
+            cmd: "spawn -- fish -c ~/.local/bin/neovide-focus",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Zen Browser",
-        kind: ItemKind::Action("spawn -- flatpak run app.zen_browser.zen", true),
+        kind: ItemKind::Action(Action {
+            cmd: "spawn -- flatpak run app.zen_browser.zen",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Files",
-        kind: ItemKind::Action("spawn -- nautilus", true),
+        kind: ItemKind::Action(Action {
+            cmd: "spawn -- nautilus",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Zotero",
-        kind: ItemKind::Action("spawn -- flatpak run org.zotero.Zotero", true),
+        kind: ItemKind::Action(Action {
+            cmd: "spawn -- flatpak run org.zotero.Zotero",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Btop",
-        kind: ItemKind::Action("spawn -- alacritty --title 'Btop' -e btop", true),
-    },
-    MenuItem {
-        label: "Close",
-        kind: ItemKind::Action("close-window", false),
+        kind: ItemKind::Action(Action {
+            cmd: "spawn -- alacritty --title 'Btop' -e btop",
+            close_on_click: true,
+        }),
     },
 ];
 
 static ACTION_MENU: &[MenuItem] = &[
     MenuItem {
+        label: "App >",
+        kind: ItemKind::Submenu {
+            items: APP_MENU,
+            on_click: None,
+        },
+    },
+    MenuItem {
         label: "Fullscreen",
-        kind: ItemKind::Action("fullscreen-window", false),
+        kind: ItemKind::Action(Action {
+            cmd: "fullscreen-window",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Maximize",
-        kind: ItemKind::Action("maximize-window-to-edges", false),
+        kind: ItemKind::Action(Action {
+            cmd: "maximize-window-to-edges",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Toggle Float",
-        kind: ItemKind::Action("toggle-window-floating", false),
+        kind: ItemKind::Action(Action {
+            cmd: "toggle-window-floating",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Close",
-        kind: ItemKind::Action("close-window", false),
+        kind: ItemKind::Action(Action {
+            cmd: "close-window",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Screenshot",
-        kind: ItemKind::Action("screenshot -p false", true),
+        kind: ItemKind::Action(Action {
+            cmd: "screenshot -p false",
+            close_on_click: true,
+        }),
     },
 ];
 
 static MOVEMENT_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Up",
-        kind: ItemKind::Action("move-window-to-workspace-up", false),
+        kind: ItemKind::Action(Action {
+            cmd: "move-window-to-workspace-up",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Right",
-        kind: ItemKind::Action("swap-window-right", false),
+        kind: ItemKind::Action(Action {
+            cmd: "swap-window-right",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Down",
-        kind: ItemKind::Action("move-window-to-workspace-down", false),
+        kind: ItemKind::Action(Action {
+            cmd: "move-window-to-workspace-down",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Left",
-        kind: ItemKind::Action("swap-window-left", false),
+        kind: ItemKind::Action(Action {
+            cmd: "swap-window-left",
+            close_on_click: false,
+        }),
     },
 ];
 
 static FOCUS_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Up",
-        kind: ItemKind::Action("focus-workspace-up", false),
+        kind: ItemKind::Action(Action {
+            cmd: "focus-workspace-up",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Switch",
-        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
+        kind: ItemKind::Action(Action {
+            cmd: "switch-focus-between-floating-and-tiling",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Right",
-        kind: ItemKind::Action("focus-column-right", false),
+        kind: ItemKind::Action(Action {
+            cmd: "focus-column-right",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Move >",
-        kind: ItemKind::Submenu(MOVEMENT_MENU),
+        kind: ItemKind::Submenu {
+            items: MOVEMENT_MENU,
+            on_click: None,
+        },
     },
     MenuItem {
         label: "Down",
-        kind: ItemKind::Action("focus-workspace-down", false),
+        kind: ItemKind::Action(Action {
+            cmd: "focus-workspace-down",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Move >",
-        kind: ItemKind::Submenu(MOVEMENT_MENU),
+        kind: ItemKind::Submenu {
+            items: MOVEMENT_MENU,
+            on_click: None,
+        },
     },
     MenuItem {
         label: "Left",
-        kind: ItemKind::Action("focus-column-left", false),
+        kind: ItemKind::Action(Action {
+            cmd: "focus-column-left",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Switch",
-        kind: ItemKind::Action("switch-focus-between-floating-and-tiling", false),
+        kind: ItemKind::Action(Action {
+            cmd: "switch-focus-between-floating-and-tiling",
+            close_on_click: false,
+        }),
     },
 ];
 
 static MISC_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Page Up",
-        kind: ItemKind::Action("key-pageup", false),
+        kind: ItemKind::Action(Action {
+            cmd: "key-pageup",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Undo",
-        kind: ItemKind::Action("key-ctrl-z", false),
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-z",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Redo",
-        kind: ItemKind::Action("key-ctrl-shift-z", false),
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-shift-z",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Zoom Out",
-        kind: ItemKind::Action("key-ctrl-minus", false),
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-minus",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Page Down",
-        kind: ItemKind::Action("key-pagedown", false),
+        kind: ItemKind::Action(Action {
+            cmd: "key-pagedown",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Zoom In",
-        kind: ItemKind::Action("key-ctrl-plus", false),
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-plus",
+            close_on_click: false,
+        }),
     },
     MenuItem {
         label: "Delete",
-        kind: ItemKind::Action("key-delete", true),
+        kind: ItemKind::Action(Action {
+            cmd: "key-delete",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Duplicate >",
-        kind: ItemKind::Submenu(DUPLICATE_MENU),
+        kind: ItemKind::Submenu {
+            items: DUPLICATE_MENU,
+            on_click: None,
+        },
     },
 ];
 
 static DUPLICATE_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Copy",
-        kind: ItemKind::Action("key-ctrl-c", true),
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-c",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Paste",
-        kind: ItemKind::Action("key-ctrl-v", true),
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-v",
+            close_on_click: true,
+        }),
     },
     MenuItem {
         label: "Duplicate",
-        kind: ItemKind::Action("key-ctrl-d", true),
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-d",
+            close_on_click: true,
+        }),
+    },
+];
+
+static BRUSH_MENU: &[MenuItem] = &[
+    MenuItem {
+        label: "Blue",
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-f5",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Green",
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-f6",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Yellow",
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-f7",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Orange",
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-f8",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Red",
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-f9",
+            close_on_click: true,
+        }),
+    },
+];
+
+static SELECTOR_MENU: &[MenuItem] = &[
+    MenuItem {
+        label: "Polygon",
+        kind: ItemKind::Action(Action {
+            cmd: "key-f1",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Single",
+        kind: ItemKind::Action(Action {
+            cmd: "key-f3",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Intersecting",
+        kind: ItemKind::Action(Action {
+            cmd: "key-f4",
+            close_on_click: true,
+        }),
+    },
+];
+
+static TOOLS_MENU: &[MenuItem] = &[
+    MenuItem {
+        label: "Vertical Space",
+        kind: ItemKind::Action(Action {
+            cmd: "key-f5",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Zoom",
+        kind: ItemKind::Action(Action {
+            cmd: "key-f7",
+            close_on_click: true,
+        }),
+    },
+    MenuItem {
+        label: "Laser",
+        kind: ItemKind::Action(Action {
+            cmd: "key-f8",
+            close_on_click: true,
+        }),
     },
 ];
 
 static ROOT_MENU: &[MenuItem] = &[
     MenuItem {
         label: "Action >",
-        kind: ItemKind::Submenu(ACTION_MENU),
+        kind: ItemKind::Submenu {
+            items: ACTION_MENU,
+            on_click: None,
+        },
     },
     MenuItem {
         label: "Workspace >",
-        kind: ItemKind::Submenu(FOCUS_MENU),
+        kind: ItemKind::Submenu {
+            items: FOCUS_MENU,
+            on_click: None,
+        },
+    },
+    MenuItem {
+        label: "Tools >",
+        kind: ItemKind::Submenu {
+            items: TOOLS_MENU,
+            on_click: Some(Action {
+                cmd: "key-ctrl-6 f6",
+                close_on_click: false,
+            }),
+        },
+    },
+    MenuItem {
+        label: "Selector >",
+        kind: ItemKind::Submenu {
+            items: SELECTOR_MENU,
+            on_click: Some(Action {
+                cmd: "key-ctrl-5 f2",
+                close_on_click: false,
+            }),
+        },
+    },
+    MenuItem {
+        label: "Brush >",
+        kind: ItemKind::Submenu {
+            items: BRUSH_MENU,
+            on_click: Some(Action {
+                cmd: "key-ctrl-1 ctrl-f1",
+                close_on_click: false,
+            }),
+        },
     },
     MenuItem {
         label: "Misc >",
-        kind: ItemKind::Submenu(MISC_MENU),
-    },
-    MenuItem {
-        label: "Tools",
-        kind: ItemKind::Action("key-ctrl-6", true),
-    },
-    MenuItem {
-        label: "Selector",
-        kind: ItemKind::Action("key-ctrl-5", true),
-    },
-    MenuItem {
-        label: "Brush",
-        kind: ItemKind::Action("key-ctrl-1", true),
-    },
-    MenuItem {
-        label: "App >",
-        kind: ItemKind::Submenu(APP_MENU),
+        kind: ItemKind::Submenu {
+            items: MISC_MENU,
+            on_click: None,
+        },
     },
 ];
 
@@ -243,33 +463,11 @@ fn current_items(path: &[usize]) -> &'static [MenuItem] {
             break;
         }
         match items[idx].kind {
-            ItemKind::Submenu(sub) => items = sub,
-            ItemKind::Action(_, _) => break,
+            ItemKind::Submenu { items: sub, .. } => items = sub,
+            ItemKind::Action(_) => break,
         }
     }
     items
-}
-
-fn breadcrumb(path: &[usize]) -> String {
-    if path.is_empty() {
-        return "Root".to_string();
-    }
-
-    let mut items = ROOT_MENU;
-    let mut out = vec!["Root".to_string()];
-
-    for &idx in path {
-        if idx >= items.len() {
-            break;
-        }
-        out.push(items[idx].label.trim_end_matches(" >").to_string());
-        match items[idx].kind {
-            ItemKind::Submenu(sub) => items = sub,
-            ItemKind::Action(_, _) => break,
-        }
-    }
-
-    out.join(" > ")
 }
 
 fn dist2(ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
@@ -280,13 +478,10 @@ fn dist2(ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
 
 fn key_token_to_evdev(tok: &str) -> Option<u16> {
     match tok {
-        // Modifiers
-        "ctrl" => Some(29),            // KEY_LEFTCTRL
-        "shift" => Some(42),           // KEY_LEFTSHIFT
-        "alt" => Some(56),             // KEY_LEFTALT
-        "meta" | "super" => Some(125), // KEY_LEFTMETA
-
-        // Digits
+        "ctrl" => Some(29),
+        "shift" => Some(42),
+        "alt" => Some(56),
+        "meta" | "super" => Some(125),
         "1" => Some(2),
         "2" => Some(3),
         "3" => Some(4),
@@ -297,8 +492,18 @@ fn key_token_to_evdev(tok: &str) -> Option<u16> {
         "8" => Some(9),
         "9" => Some(10),
         "0" => Some(11),
-
-        // Letters
+        "f1" => Some(59),
+        "f2" => Some(60),
+        "f3" => Some(61),
+        "f4" => Some(62),
+        "f5" => Some(63),
+        "f6" => Some(64),
+        "f7" => Some(65),
+        "f8" => Some(66),
+        "f9" => Some(67),
+        "f10" => Some(68),
+        "f11" => Some(87),
+        "f12" => Some(88),
         "a" => Some(30),
         "b" => Some(48),
         "c" => Some(46),
@@ -325,20 +530,24 @@ fn key_token_to_evdev(tok: &str) -> Option<u16> {
         "x" => Some(45),
         "y" => Some(21),
         "z" => Some(44),
-
-        // Special keys
         "minus" => Some(12),
         "equal" | "plus" => Some(13),
         "delete" | "backspace" => Some(14),
         "pageup" => Some(104),
         "pagedown" => Some(109),
-
         _ => None,
     }
 }
 
+fn run_ydotool_sequence(spec: &str) {
+    for combo in spec.split_whitespace() {
+        run_ydotool_combo(combo);
+        // Small spacing helps tools/apps register successive synthetic keys reliably.
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+}
+
 fn run_ydotool_combo(spec: &str) {
-    // Supports both "delete" and combos like "ctrl-shift-z".
     let parts: Vec<&str> = spec.split('-').collect();
     if parts.is_empty() {
         return;
@@ -374,7 +583,7 @@ fn run_ydotool_combo(spec: &str) {
 
 fn run_niri_action(action: &str) {
     if let Some(spec) = action.strip_prefix("key-") {
-        run_ydotool_combo(spec);
+        run_ydotool_sequence(spec);
         return;
     }
 
@@ -384,6 +593,21 @@ fn run_niri_action(action: &str) {
         cmd.arg(part);
     }
     let _ = cmd.status();
+}
+
+fn run_action(action: Action, st: &mut State, win: &ApplicationWindow, da: &DrawingArea) {
+    if action.close_on_click {
+        hide_menu(st, win, da);
+    }
+
+    if action.cmd.starts_with("screenshot") {
+        let action_owned = action.cmd.to_string();
+        glib::timeout_add_local_once(std::time::Duration::from_millis(80), move || {
+            run_niri_action(&action_owned);
+        });
+    } else {
+        run_niri_action(action.cmd);
+    }
 }
 
 fn install_transparent_css() {
@@ -488,30 +712,14 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
     }
     let _ = cr.stroke();
 
-    let bc = breadcrumb(&st.path);
-    cr.set_source_rgba(1.0, 1.0, 1.0, 0.90);
-    cr.select_font_face(
-        "Sans",
-        gtk::cairo::FontSlant::Normal,
-        gtk::cairo::FontWeight::Normal,
-    );
-    cr.set_font_size(13.0 * UI_SCALE);
-    if let Ok(ext) = cr.text_extents(&bc) {
-        cr.move_to(cx - ext.width() / 2.0 - ext.x_bearing(), cy - 42.0);
-        let _ = cr.show_text(&bc);
-    }
-
     let items = current_items(&st.path);
     let n = items.len();
     if n == 0 {
         return;
     }
 
-    let dist = if st.path.is_empty() { 120.0 } else { 108.0 };
-    let dist = dist * UI_SCALE;
-
-    let radius = if st.path.is_empty() { 43.0 } else { 44.0 };
-    let radius = radius * UI_SCALE;
+    let dist = 120.0 * UI_SCALE;
+    let radius = 43.0 * UI_SCALE;
 
     let points = ring_layout(n, cx, cy, dist);
 
@@ -533,7 +741,6 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
             gtk::cairo::FontSlant::Normal,
             gtk::cairo::FontWeight::Normal,
         );
-        cr.set_font_size(12.5);
         cr.set_font_size(12.5 * UI_SCALE);
 
         let text = items[i].label;
@@ -547,7 +754,7 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
     }
 }
 
-fn hide_menu(st: &mut State, win: &ApplicationWindow, da: &DrawingArea) {
+fn hide_menu(st: &mut State, win: &ApplicationWindow, _da: &DrawingArea) {
     st.visible = false;
     st.anchored = false;
     st.path.clear();
@@ -673,34 +880,32 @@ fn run_daemon() {
                     return;
                 }
 
-                let dist = if st.path.is_empty() { 120.0 } else { 108.0 } * UI_SCALE;
-                let deadzone = if st.path.is_empty() { 25.0 } else { 30.0 } * UI_SCALE;
+                let dist = 120.0 * UI_SCALE;
+                let deadzone = 25.0 * UI_SCALE;
                 let points = ring_layout(n, st.cx, st.cy, dist);
                 let idx = match closest_index_for_pointer(x, y, st.cx, st.cy, &points, deadzone) {
                     Some(i) if i < n => i,
                     _ => return,
                 };
 
-                match items[idx].kind {
-                    ItemKind::Action(action, close_on_click) => {
-                        if close_on_click {
-                            hide_menu(&mut st, &win2, &da2);
-                        }
+                // "Quick click" = inside ring inner boundary (dist - button radius).
+                let radius = 43.0 * UI_SCALE;
+                let inner_ring = dist - radius;
+                let quick_click = dist2(x, y, st.cx, st.cy) <= inner_ring * inner_ring;
 
-                        // HACK
-                        if action.starts_with("screenshot") {
-                            let action_owned = action.to_string();
-                            glib::timeout_add_local_once(
-                                std::time::Duration::from_millis(80),
-                                move || {
-                                    run_niri_action(&action_owned);
-                                },
-                            );
-                        } else {
-                            run_niri_action(action);
-                        }
+                match items[idx].kind {
+                    ItemKind::Action(action) => {
+                        run_action(action, &mut st, &win2, &da2);
                     }
-                    ItemKind::Submenu(_) => {
+                    ItemKind::Submenu { on_click, .. } => {
+                        if let Some(mut action) = on_click {
+                            if quick_click {
+                                action.close_on_click = true;
+                                run_action(action, &mut st, &win2, &da2);
+                                return;
+                            }
+                            run_action(action, &mut st, &win2, &da2);
+                        }
                         st.path.push(idx);
                         st.cx = x;
                         st.cy = y;
@@ -751,10 +956,8 @@ fn run_daemon() {
                 if let Ok(stream) = stream {
                     let mut reader = BufReader::new(stream);
                     let mut line = String::new();
-                    if reader.read_line(&mut line).is_ok() {
-                        if line.trim() == "TOGGLE" {
-                            let _ = tx.send("TOGGLE".to_string());
-                        }
+                    if reader.read_line(&mut line).is_ok() && line.trim() == "TOGGLE" {
+                        let _ = tx.send("TOGGLE".to_string());
                     }
                 }
             }
