@@ -30,9 +30,32 @@ enum ItemKind {
 }
 
 #[derive(Clone, Copy)]
+struct Color {
+    r: f64,
+    g: f64,
+    b: f64,
+    a: f64,
+}
+
+const DEFAULT_ITEM_COLOR: Color = Color {
+    r: 0.15,
+    g: 0.15,
+    b: 0.15,
+    a: 0.80,
+};
+
+const SUBMENU_ITEM_COLOR: Color = Color {
+    r: 0.21,
+    g: 0.19,
+    b: 0.25,
+    a: 0.84,
+};
+
+#[derive(Clone, Copy)]
 struct MenuItem {
     label: &'static str,
     kind: ItemKind,
+    color: Color,
 }
 
 const CENTER_RADIUS: f64 = 18.0;
@@ -47,6 +70,7 @@ static APP_MENU: &[MenuItem] = &[
             cmd: "spawn -- fish -c ~/.local/bin/neovide-focus",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Zen Browser",
@@ -54,6 +78,7 @@ static APP_MENU: &[MenuItem] = &[
             cmd: "spawn -- flatpak run app.zen_browser.zen",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Files",
@@ -61,6 +86,7 @@ static APP_MENU: &[MenuItem] = &[
             cmd: "spawn -- nautilus",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Zotero",
@@ -68,6 +94,7 @@ static APP_MENU: &[MenuItem] = &[
             cmd: "spawn -- flatpak run org.zotero.Zotero",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Btop",
@@ -75,6 +102,7 @@ static APP_MENU: &[MenuItem] = &[
             cmd: "spawn -- alacritty --title 'Btop' -e btop",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
 ];
 
@@ -85,6 +113,7 @@ static ACTION_MENU: &[MenuItem] = &[
             items: APP_MENU,
             on_click: None,
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Fullscreen",
@@ -92,6 +121,7 @@ static ACTION_MENU: &[MenuItem] = &[
             cmd: "fullscreen-window",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Maximize",
@@ -99,6 +129,7 @@ static ACTION_MENU: &[MenuItem] = &[
             cmd: "maximize-window-to-edges",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Toggle Float",
@@ -106,6 +137,7 @@ static ACTION_MENU: &[MenuItem] = &[
             cmd: "toggle-window-floating",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Close",
@@ -113,6 +145,7 @@ static ACTION_MENU: &[MenuItem] = &[
             cmd: "close-window",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Screenshot",
@@ -120,6 +153,7 @@ static ACTION_MENU: &[MenuItem] = &[
             cmd: "screenshot -p false",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
 ];
 
@@ -130,6 +164,7 @@ static MOVEMENT_MENU: &[MenuItem] = &[
             cmd: "move-window-to-workspace-up",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Right",
@@ -137,6 +172,7 @@ static MOVEMENT_MENU: &[MenuItem] = &[
             cmd: "swap-window-right",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Down",
@@ -144,6 +180,7 @@ static MOVEMENT_MENU: &[MenuItem] = &[
             cmd: "move-window-to-workspace-down",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Left",
@@ -151,6 +188,7 @@ static MOVEMENT_MENU: &[MenuItem] = &[
             cmd: "swap-window-left",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
 ];
 
@@ -161,6 +199,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             cmd: "focus-workspace-up",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Switch",
@@ -168,6 +207,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             cmd: "switch-focus-between-floating-and-tiling",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Right",
@@ -175,6 +215,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             cmd: "focus-column-right",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Move >",
@@ -182,6 +223,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             items: MOVEMENT_MENU,
             on_click: None,
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Down",
@@ -189,6 +231,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             cmd: "focus-workspace-down",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Move >",
@@ -196,6 +239,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             items: MOVEMENT_MENU,
             on_click: None,
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Left",
@@ -203,6 +247,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             cmd: "focus-column-left",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Switch",
@@ -210,6 +255,7 @@ static FOCUS_MENU: &[MenuItem] = &[
             cmd: "switch-focus-between-floating-and-tiling",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
 ];
 
@@ -220,6 +266,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-pageup",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Undo",
@@ -227,6 +274,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-z",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Redo",
@@ -234,6 +282,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-shift-z",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Delete",
@@ -241,6 +290,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-delete",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Page Down",
@@ -248,6 +298,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-pagedown",
             close_on_click: false,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Copy",
@@ -255,6 +306,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-c",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Paste",
@@ -262,6 +314,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-v",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Duplicate",
@@ -269,6 +322,7 @@ static MISC_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-d",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
 ];
 
@@ -279,6 +333,12 @@ static BRUSH_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-f5",
             close_on_click: true,
         }),
+        color: Color {
+            r: 0.20,
+            g: 0.45,
+            b: 0.95,
+            a: 0.90,
+        },
     },
     MenuItem {
         label: "Green",
@@ -286,6 +346,12 @@ static BRUSH_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-f6",
             close_on_click: true,
         }),
+        color: Color {
+            r: 0.18,
+            g: 0.72,
+            b: 0.30,
+            a: 0.90,
+        },
     },
     MenuItem {
         label: "Yellow",
@@ -293,6 +359,12 @@ static BRUSH_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-f7",
             close_on_click: true,
         }),
+        color: Color {
+            r: 0.95,
+            g: 0.83,
+            b: 0.20,
+            a: 0.90,
+        },
     },
     MenuItem {
         label: "Orange",
@@ -300,6 +372,12 @@ static BRUSH_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-f8",
             close_on_click: true,
         }),
+        color: Color {
+            r: 0.96,
+            g: 0.56,
+            b: 0.18,
+            a: 0.90,
+        },
     },
     MenuItem {
         label: "Red",
@@ -307,6 +385,12 @@ static BRUSH_MENU: &[MenuItem] = &[
             cmd: "key-ctrl-f9",
             close_on_click: true,
         }),
+        color: Color {
+            r: 0.88,
+            g: 0.24,
+            b: 0.24,
+            a: 0.90,
+        },
     },
 ];
 
@@ -317,6 +401,7 @@ static SELECTOR_MENU: &[MenuItem] = &[
             cmd: "key-f1",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Single",
@@ -324,6 +409,7 @@ static SELECTOR_MENU: &[MenuItem] = &[
             cmd: "key-f3",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Intersecting",
@@ -331,6 +417,7 @@ static SELECTOR_MENU: &[MenuItem] = &[
             cmd: "key-f4",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
 ];
 
@@ -341,6 +428,7 @@ static TOOLS_MENU: &[MenuItem] = &[
             cmd: "key-f5",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Zoom",
@@ -348,6 +436,7 @@ static TOOLS_MENU: &[MenuItem] = &[
             cmd: "key-f7",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
         label: "Laser",
@@ -355,6 +444,7 @@ static TOOLS_MENU: &[MenuItem] = &[
             cmd: "key-f8",
             close_on_click: true,
         }),
+        color: DEFAULT_ITEM_COLOR,
     },
 ];
 
@@ -365,6 +455,7 @@ static ROOT_MENU: &[MenuItem] = &[
             items: ACTION_MENU,
             on_click: None,
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Workspace >",
@@ -372,6 +463,7 @@ static ROOT_MENU: &[MenuItem] = &[
             items: FOCUS_MENU,
             on_click: None,
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Tools >",
@@ -382,6 +474,7 @@ static ROOT_MENU: &[MenuItem] = &[
                 close_on_click: false,
             }),
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Selector >",
@@ -392,6 +485,7 @@ static ROOT_MENU: &[MenuItem] = &[
                 close_on_click: false,
             }),
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Brush >",
@@ -402,6 +496,7 @@ static ROOT_MENU: &[MenuItem] = &[
                 close_on_click: false,
             }),
         },
+        color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
         label: "Misc >",
@@ -409,6 +504,7 @@ static ROOT_MENU: &[MenuItem] = &[
             items: MISC_MENU,
             on_click: None,
         },
+        color: SUBMENU_ITEM_COLOR,
     },
 ];
 
@@ -702,8 +798,8 @@ fn draw_ui(cr: &gtk::cairo::Context, _w: i32, _h: i32, st: &State) {
 
     for i in 0..n {
         let (bx, by) = points[i];
-
-        cr.set_source_rgba(0.15, 0.15, 0.15, 0.80);
+        let item = items[i];
+        cr.set_source_rgba(item.color.r, item.color.g, item.color.b, item.color.a);
         cr.arc(bx, by, radius, 0.0, std::f64::consts::TAU);
         let _ = cr.fill();
 
