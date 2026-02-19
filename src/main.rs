@@ -45,10 +45,10 @@ const DEFAULT_ITEM_COLOR: Color = Color {
 };
 
 const SUBMENU_ITEM_COLOR: Color = Color {
-    r: 0.21,
-    g: 0.19,
-    b: 0.25,
-    a: 0.84,
+    r: 0.31,
+    g: 0.26,
+    b: 0.40,
+    a: 0.90,
 };
 
 #[derive(Clone, Copy)]
@@ -73,7 +73,7 @@ static APP_MENU: &[MenuItem] = &[
         color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
-        label: "Zen Browser",
+        label: "Zen",
         kind: ItemKind::Action(Action {
             cmd: "spawn -- flatpak run app.zen_browser.zen",
             close_on_click: true,
@@ -108,7 +108,7 @@ static APP_MENU: &[MenuItem] = &[
 
 static ACTION_MENU: &[MenuItem] = &[
     MenuItem {
-        label: "App >",
+        label: "App",
         kind: ItemKind::Submenu {
             items: APP_MENU,
             on_click: None,
@@ -132,7 +132,7 @@ static ACTION_MENU: &[MenuItem] = &[
         color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
-        label: "Toggle Float",
+        label: "Float",
         kind: ItemKind::Action(Action {
             cmd: "toggle-window-floating",
             close_on_click: false,
@@ -218,7 +218,7 @@ static FOCUS_MENU: &[MenuItem] = &[
         color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
-        label: "Move >",
+        label: "Move",
         kind: ItemKind::Submenu {
             items: MOVEMENT_MENU,
             on_click: None,
@@ -234,7 +234,7 @@ static FOCUS_MENU: &[MenuItem] = &[
         color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
-        label: "Move >",
+        label: "Move",
         kind: ItemKind::Submenu {
             items: MOVEMENT_MENU,
             on_click: None,
@@ -261,7 +261,7 @@ static FOCUS_MENU: &[MenuItem] = &[
 
 static MISC_MENU: &[MenuItem] = &[
     MenuItem {
-        label: "Page Up",
+        label: "PageUp",
         kind: ItemKind::Action(Action {
             cmd: "key-pageup",
             close_on_click: false,
@@ -293,7 +293,7 @@ static MISC_MENU: &[MenuItem] = &[
         color: DEFAULT_ITEM_COLOR,
     },
     MenuItem {
-        label: "Page Down",
+        label: "PageDown",
         kind: ItemKind::Action(Action {
             cmd: "key-pagedown",
             close_on_click: false,
@@ -423,7 +423,7 @@ static SELECTOR_MENU: &[MenuItem] = &[
 
 static TOOLS_MENU: &[MenuItem] = &[
     MenuItem {
-        label: "Vertical Space",
+        label: "Vertical",
         kind: ItemKind::Action(Action {
             cmd: "key-f5",
             close_on_click: true,
@@ -450,7 +450,7 @@ static TOOLS_MENU: &[MenuItem] = &[
 
 static ROOT_MENU: &[MenuItem] = &[
     MenuItem {
-        label: "Action >",
+        label: "Action",
         kind: ItemKind::Submenu {
             items: ACTION_MENU,
             on_click: None,
@@ -458,7 +458,7 @@ static ROOT_MENU: &[MenuItem] = &[
         color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
-        label: "Workspace >",
+        label: "Workspace",
         kind: ItemKind::Submenu {
             items: FOCUS_MENU,
             on_click: None,
@@ -466,7 +466,7 @@ static ROOT_MENU: &[MenuItem] = &[
         color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
-        label: "Tools >",
+        label: "Tools",
         kind: ItemKind::Submenu {
             items: TOOLS_MENU,
             on_click: Some(Action {
@@ -477,7 +477,7 @@ static ROOT_MENU: &[MenuItem] = &[
         color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
-        label: "Selector >",
+        label: "Selector",
         kind: ItemKind::Submenu {
             items: SELECTOR_MENU,
             on_click: Some(Action {
@@ -488,7 +488,7 @@ static ROOT_MENU: &[MenuItem] = &[
         color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
-        label: "Brush >",
+        label: "Brush",
         kind: ItemKind::Submenu {
             items: BRUSH_MENU,
             on_click: Some(Action {
@@ -499,7 +499,7 @@ static ROOT_MENU: &[MenuItem] = &[
         color: SUBMENU_ITEM_COLOR,
     },
     MenuItem {
-        label: "Misc >",
+        label: "Misc",
         kind: ItemKind::Submenu {
             items: MISC_MENU,
             on_click: None,
