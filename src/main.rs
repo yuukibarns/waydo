@@ -328,6 +328,19 @@ static MISC_MENU: &[MenuItem] = &[
 
 static BRUSH_MENU: &[MenuItem] = &[
     MenuItem {
+        label: "Black",
+        kind: ItemKind::Action(Action {
+            cmd: "key-ctrl-f1",
+            close_on_click: true,
+        }),
+        color: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.90,
+        },
+    },
+    MenuItem {
         label: "Blue",
         kind: ItemKind::Action(Action {
             cmd: "key-ctrl-f5",
@@ -492,7 +505,7 @@ static ROOT_MENU: &[MenuItem] = &[
         kind: ItemKind::Submenu {
             items: BRUSH_MENU,
             on_click: Some(Action {
-                cmd: "key-ctrl-1 ctrl-f1",
+                cmd: "key-ctrl-1",
                 close_on_click: false,
             }),
         },
